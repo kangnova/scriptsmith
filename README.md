@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ScriptSmith
 
-## Getting Started
+AI selling-content script generator for TikTok, Reels, and Shorts.
 
-First, run the development server:
+Type a product name, price, and category — get a ready-to-post script: hook, spoken script, call-to-action, caption + hashtags, background music recommendation, and (optionally) a copy-paste prompt for AI video generators.
+
+## Features
+
+- **Bilingual (Indonesian / English)** — the entire UI and the generated content switch language together.
+- **AI category suggestions** — type a product name and the AI suggests selling categories (click to pick, or type your own).
+- **Optional product link** — the caption and CTA include your link automatically.
+- **Two output modes** — text-only, or text + AI video prompt (Kling / Vidu / Runway / Pika).
+- **Caption + hashtags** — ready-to-paste caption with discovery tags (`#fyp`, `#foryou`, niche tags).
+- **Resilient model routing** — automatic fallback across multiple LLM providers via OpenRouter, so a rate-limited model never blocks a request.
+
+## Tech stack
+
+- Next.js 16 (App Router), React 19, TypeScript (strict), Tailwind CSS v4
+- OpenRouter with model fallback (DeepSeek Chat → Llama 3.3 70B → Qwen 2.5 72B)
+
+## Getting started
 
 ```bash
+npm install
+# create .env.local and set your OpenRouter key (see .env.example)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+  app/
+    page.tsx                          # form UI (client component)
+    api/
+      generate/route.ts               # script generation endpoint
+      suggest-categories/route.ts     # AI category suggestion endpoint
+  lib/
+    openrouter.ts                     # LLM client with ordered model fallback
+scripts/
+  gen.py                              # CLI prototype
+docs/
+  SPEC.md                             # spec: API contracts, business rules
+```
 
-## Learn More
+## API
 
-To learn more about Next.js, take a look at the following resources:
+### POST /api/generate
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Body: `{ product, price, category, mode, lang, link }`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Returns `{ ok: true, data: { text } }`.
 
-## Deploy on Vercel
+### POST /api/suggest-categories
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Body: `{ product, lang }`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Returns `{ ok: true, data: { categories: string[] } }`.
+
+## Roadmap
+
+- Production deployment (pm2 + nginx + domain)
+- Real-time trending TikTok sound data
+- User accounts and saved scripts
+- Multi-page app with next-intl (current i18n is a single-page dictionary)
