@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { complete } from "@/lib/openrouter";
+import {
+  FREE_DAILY_LIMIT,
+  effectivePlan,
+  jakartaStartOfDay,
+} from "@/lib/limits";
 
 const SYSTEM = `Kamu adalah copywriter konten jualan yang jago bikin video pendek
 TikTok/Reels/Shorts yang MENJUAL dan bikin orang berhenti scroll. Setiap output
@@ -76,6 +84,43 @@ HASIL YANG WAJIB ADA (format rapi, siap copy-paste):
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { ok: false, error: "LOGIN_REQUIRED" },
+        { status: 401 }
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+    if (!user) {
+      return NextResponse.json(
+        { ok: false, error: "LOGIN_REQUIRED" },
+        { status: 401 }
+      );
+    }
+
+    // Cek plan efektif (PRO kedaluwarsa = otomatis FREE).
+    const plan = effectivePlan(user.plan, user.planExpiresAt);
+    if (plan === "FREE") {
+      const today = jakartaStartOfDay();
+      const used = await prisma.generation.count({
+        where: { userId: user.id, createdAt: { gte: today } },
+      });
+      if (used >= FREE_DAILY_LIMIT) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "QUOTA_EXCEEDED",
+            data: { used, limit: FREE_DAILY_LIMIT },
+          },
+          { status: 429 }
+        );
+      }
+    }
+
     const body = await req.json();
     const { product, price, category, mode, lang, link } = body ?? {};
 
@@ -110,6 +155,9 @@ export async function POST(req: Request) {
       .replace(/^\s*[-*_]{3,}\s*\n?/, "")
       .replace(/\n?\s*[-*_]{3,}\s*$/, "")
       .trim();
+
+    // Catat pemakaian (buat hitung kuota harian free).
+    await prisma.generation.create({ data: { userId: user.id } });
 
     return NextResponse.json({ ok: true, data: { text: cleaned } });
   } catch (e) {

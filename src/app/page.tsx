@@ -29,6 +29,23 @@ interface Dict {
   copy: string;
   copied: string;
   required: string;
+  loginRequired: string;
+  quotaExceeded: string;
+  quotaLeft: string;
+  proActive: string;
+  validUntil: string;
+  freePlan: string;
+  proPlan: string;
+  perMonth: string;
+  perYear: string;
+  pricingTitle: string;
+  pricingSub: string;
+  upgradeCta: string;
+  contactWa: string;
+  mostPopular: string;
+  saveBadge: string;
+  freeFeature: string;
+  unlimitedFeature: string;
 }
 
 const STRINGS: Record<Lang, Dict> = {
@@ -58,6 +75,26 @@ const STRINGS: Record<Lang, Dict> = {
     copy: "Salin",
     copied: "Tersalin!",
     required: "Nama produk dan harga wajib diisi.",
+    loginRequired:
+      "Login dulu pakai Google untuk membuat naskah (gratis 2 naskah/hari).",
+    quotaExceeded:
+      "Kuota gratis hari ini sudah habis (2 naskah/hari). Upgrade ke PRO untuk naskah unlimited.",
+    quotaLeft: "Sisa kuota gratis hari ini",
+    proActive: "PRO aktif",
+    validUntil: "berlaku sampai",
+    freePlan: "Gratis",
+    proPlan: "PRO",
+    perMonth: "/bulan",
+    perYear: "/tahun",
+    pricingTitle: "Harga",
+    pricingSub:
+      "Gratis 2 naskah/hari. Upgrade untuk naskah unlimited + semua fitur.",
+    upgradeCta: "Upgrade ke PRO",
+    contactWa: "Konfirmasi lewat WhatsApp",
+    mostPopular: "PALING LARIS",
+    saveBadge: "Hemat",
+    freeFeature: "2 naskah per hari",
+    unlimitedFeature: "Naskah unlimited + semua mode",
   },
   en: {
     tagline:
@@ -85,8 +122,41 @@ const STRINGS: Record<Lang, Dict> = {
     copy: "Copy",
     copied: "Copied!",
     required: "Product name and price are required.",
+    loginRequired:
+      "Sign in with Google to generate scripts (free 2/day).",
+    quotaExceeded:
+      "Free daily quota used up (2/day). Upgrade to PRO for unlimited scripts.",
+    quotaLeft: "Free quota left today",
+    proActive: "PRO active",
+    validUntil: "valid until",
+    freePlan: "Free",
+    proPlan: "PRO",
+    perMonth: "/month",
+    perYear: "/year",
+    pricingTitle: "Pricing",
+    pricingSub:
+      "Free 2 scripts/day. Upgrade for unlimited scripts + all features.",
+    upgradeCta: "Upgrade to PRO",
+    contactWa: "Confirm via WhatsApp",
+    mostPopular: "MOST POPULAR",
+    saveBadge: "Save",
+    freeFeature: "2 scripts per day",
+    unlimitedFeature: "Unlimited scripts + all modes",
   },
 };
+
+interface MeData {
+  loggedIn: boolean;
+  plan?: "FREE" | "PRO";
+  planExpiresAt?: string | null;
+  usedToday?: number;
+  dailyLimit?: number;
+  remainingToday?: number;
+  priceMonthly?: number;
+  priceYearly?: number;
+  upgradeWhatsapp?: string;
+  paymentInfo?: string;
+}
 
 export default function Home() {
   const [product, setProduct] = useState("");
@@ -104,7 +174,24 @@ export default function Home() {
   const [suggesting, setSuggesting] = useState(false);
   const reqIdRef = useRef(0);
 
+  const [me, setMe] = useState<MeData | null>(null);
+
+  async function fetchMe() {
+    try {
+      const res = await fetch("/api/me", { cache: "no-store" });
+      const json = await res.json();
+      if (json.ok) setMe(json.data as MeData);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  useEffect(() => {
+    fetchMe();
+  }, []);
+
   const t = STRINGS[lang];
+  const fmtRp = (n: number) => n.toLocaleString("id-ID");
 
   useEffect(() => {
     const value = product.trim();
@@ -151,10 +238,17 @@ export default function Home() {
       });
       const json = await res.json();
       if (!res.ok || !json.ok) {
-        setError(json.error || `Request failed (${res.status})`);
+        if (res.status === 401 || json.error === "LOGIN_REQUIRED") {
+          setError(t.loginRequired);
+        } else if (res.status === 429 || json.error === "QUOTA_EXCEEDED") {
+          setError(t.quotaExceeded);
+        } else {
+          setError(json.error || `Request failed (${res.status})`);
+        }
         return;
       }
       setResult(json.data?.text ?? "");
+      fetchMe();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -191,6 +285,43 @@ export default function Home() {
           <h1 className="text-3xl font-bold text-slate-900">ScriptSmith</h1>
           <p className="mt-1 text-sm text-slate-500">{t.tagline}</p>
         </header>
+
+        {me && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
+            {me.loggedIn ? (
+              me.plan === "PRO" ? (
+                <span className="font-semibold text-emerald-700">
+                  ✓ {t.proActive}
+                  {me.planExpiresAt && (
+                    <span className="ml-2 font-normal text-slate-500">
+                      {t.validUntil}{" "}
+                      {new Date(me.planExpiresAt).toLocaleDateString("id-ID")}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-slate-700">
+                  {t.quotaLeft}:{" "}
+                  <strong>
+                    {me.remainingToday ?? 0}/{me.dailyLimit ?? 0}
+                  </strong>
+                </span>
+              )
+            ) : (
+              <span className="text-slate-600">{t.loginRequired}</span>
+            )}
+            <a
+              href={me.loggedIn ? "#pricing" : "/login"}
+              className="rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700"
+            >
+              {me.loggedIn
+                ? t.upgradeCta
+                : lang === "id"
+                  ? "Login"
+                  : "Sign in"}
+            </a>
+          </div>
+        )}
 
         <form
           onSubmit={handleSubmit}
@@ -369,6 +500,76 @@ export default function Home() {
             </pre>
           </section>
         )}
+
+        <section id="pricing" className="mt-8">
+          <h2 className="text-xl font-bold text-slate-900">{t.pricingTitle}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t.pricingSub}</p>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="text-sm font-semibold text-slate-700">
+                {t.freePlan}
+              </div>
+              <div className="mt-2 text-2xl font-bold text-slate-900">Rp 0</div>
+              <ul className="mt-3 space-y-1 text-sm text-slate-600">
+                <li>• {t.freeFeature}</li>
+              </ul>
+            </div>
+
+            <div className="relative rounded-xl border-2 border-orange-500 bg-white p-5 shadow-sm">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-orange-600 px-2.5 py-0.5 text-[10px] font-bold text-white">
+                {t.mostPopular}
+              </span>
+              <div className="text-sm font-semibold text-slate-700">
+                {t.proPlan} {t.perMonth}
+              </div>
+              <div className="mt-2 text-2xl font-bold text-slate-900">
+                Rp {fmtRp(me?.priceMonthly ?? 0)}
+              </div>
+              <ul className="mt-3 space-y-1 text-sm text-slate-600">
+                <li>• {t.unlimitedFeature}</li>
+              </ul>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="text-sm font-semibold text-slate-700">
+                {t.proPlan} {t.perYear}
+              </div>
+              <div className="mt-2 text-2xl font-bold text-slate-900">
+                Rp {fmtRp(me?.priceYearly ?? 0)}
+              </div>
+              <div className="mt-1 text-xs font-semibold text-emerald-600">
+                {t.saveBadge}
+              </div>
+              <ul className="mt-3 space-y-1 text-sm text-slate-600">
+                <li>• {t.unlimitedFeature}</li>
+              </ul>
+            </div>
+          </div>
+
+          {(me?.paymentInfo || me?.upgradeWhatsapp) && (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-800">
+                {t.contactWa}
+              </h3>
+              {me?.paymentInfo && (
+                <pre className="mt-2 whitespace-pre-wrap text-sm text-slate-600">
+                  {me.paymentInfo}
+                </pre>
+              )}
+              {me?.upgradeWhatsapp && (
+                <a
+                  href={`https://wa.me/${me.upgradeWhatsapp}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                >
+                  WhatsApp
+                </a>
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );

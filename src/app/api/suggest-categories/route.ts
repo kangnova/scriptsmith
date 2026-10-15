@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { complete } from "@/lib/openrouter";
 
 const SYSTEM = `Kamu adalah asisten yang jago mengklasifikasi produk e-commerce.
@@ -9,6 +11,14 @@ code fence.`;
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { ok: false, error: "LOGIN_REQUIRED" },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const { product, lang } = body ?? {};
 

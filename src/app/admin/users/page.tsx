@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import PlanActions from "@/components/PlanActions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function AdminUsers() {
               <th className="px-4 py-2 font-medium">Name</th>
               <th className="px-4 py-2 font-medium">Email</th>
               <th className="px-4 py-2 font-medium">Role</th>
+              <th className="px-4 py-2 font-medium">Plan</th>
               <th className="px-4 py-2 font-medium">Joined</th>
             </tr>
           </thead>
@@ -34,6 +36,13 @@ export default async function AdminUsers() {
                   >
                     {u.role}
                   </span>
+                </td>
+                <td className="px-4 py-2.5">
+                  <PlanActions
+                    userId={u.id}
+                    plan={u.plan}
+                    planExpiresAt={u.planExpiresAt}
+                  />
                 </td>
                 <td className="px-4 py-2.5 text-slate-500">
                   {u.createdAt.toISOString().slice(0, 10)}
