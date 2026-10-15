@@ -1,5 +1,7 @@
 # ScriptSmith
 
+[![Live demo](https://img.shields.io/badge/Live_demo-scriptsmith.web.id-orange)](https://scriptsmith.web.id)
+
 AI selling-content script generator for TikTok, Reels, and Shorts.
 
 Type a product name, price, and category — get a ready-to-post script: hook, spoken script, call-to-action, caption + hashtags, background music recommendation, and (optionally) a copy-paste prompt for AI video generators.
