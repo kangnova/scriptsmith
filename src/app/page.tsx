@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import GoogleOneTap from "@/components/GoogleOneTap";
 
 type Lang = "id" | "en";
 
@@ -20,6 +21,9 @@ interface Dict {
   suggestedLabel: string;
   languageLabel: string;
   modeLabel: string;
+  formatLabel: string;
+  formatVideo: string;
+  formatThreads: string;
   textOnly: string;
   textVideo: string;
   generate: string;
@@ -46,12 +50,18 @@ interface Dict {
   saveBadge: string;
   freeFeature: string;
   unlimitedFeature: string;
+  videoLocked: string;
+  choosePlan: string;
+  textTier: string;
+  videoTier: string;
+  textTierFeature: string;
+  videoTierFeature: string;
 }
 
 const STRINGS: Record<Lang, Dict> = {
   id: {
     tagline:
-      "AI pembuat naskah konten jualan untuk TikTok, Reels & Shorts — lengkap hook, naskah, ajakan beli, caption + hashtag, pilihan musik, dan prompt video AI yang tinggal copy-paste.",
+      "Pembuat naskah konten jualan untuk TikTok, Reels & Shorts — lengkap hook, naskah, ajakan beli, caption + hashtag, pilihan musik, dan panduan video yang tinggal copy-paste.",
     productLabel: "Nama produk",
     productPlaceholder: "contoh: Glow Whitening Serum",
     priceLabel: "Harga (Rp)",
@@ -65,9 +75,12 @@ const STRINGS: Record<Lang, Dict> = {
     categorySuggesting: "Mencari saran kategori…",
     suggestedLabel: "Saran kategori (klik untuk pilih):",
     languageLabel: "Bahasa",
+    formatLabel: "Jenis konten",
+    formatVideo: "Video pendek",
+    formatThreads: "Threads / Carousel",
     modeLabel: "Mode hasil",
     textOnly: "Teks saja",
-    textVideo: "Teks + prompt video AI",
+    textVideo: "Teks + panduan video",
     generate: "Buat naskah",
     generating: "Membuat…",
     forging: "Menempa naskah jualanmu…",
@@ -88,17 +101,24 @@ const STRINGS: Record<Lang, Dict> = {
     perYear: "/tahun",
     pricingTitle: "Harga",
     pricingSub:
-      "Gratis 2 naskah/hari. Upgrade untuk naskah unlimited + semua fitur.",
+      "Gratis 2 naskah/hari (teks). Upgrade untuk naskah unlimited; mode video khusus paket Teks + Video.",
     upgradeCta: "Upgrade ke PRO",
     contactWa: "Konfirmasi lewat WhatsApp",
     mostPopular: "PALING LARIS",
     saveBadge: "Hemat",
-    freeFeature: "2 naskah per hari",
-    unlimitedFeature: "Naskah unlimited + semua mode",
+    freeFeature: "2 naskah per hari (teks saja)",
+    unlimitedFeature: "Naskah teks unlimited",
+    videoLocked:
+      "Mode video butuh paket Teks + Video (Rp 75.000/bulan).",
+    choosePlan: "Pilih paket",
+    textTier: "Teks saja",
+    videoTier: "Teks + Video",
+    textTierFeature: "Naskah teks unlimited",
+    videoTierFeature: "Naskah teks + panduan video unlimited",
   },
   en: {
     tagline:
-      "AI selling-content scripts for TikTok, Reels & Shorts — hook, script, CTA, caption + hashtags, music pick, and a copy-paste AI video prompt.",
+      "Selling-content scripts for TikTok, Reels & Shorts — hook, script, CTA, caption + hashtags, music pick, and a copy-paste video guide.",
     productLabel: "Product name",
     productPlaceholder: "e.g. Glow Whitening Serum",
     priceLabel: "Price (IDR)",
@@ -112,9 +132,12 @@ const STRINGS: Record<Lang, Dict> = {
     categorySuggesting: "Finding category suggestions…",
     suggestedLabel: "Suggested categories (click to pick):",
     languageLabel: "Language",
+    formatLabel: "Content type",
+    formatVideo: "Short video",
+    formatThreads: "Threads / Carousel",
     modeLabel: "Output mode",
     textOnly: "Text only",
-    textVideo: "Text + AI video prompt",
+    textVideo: "Text + video guide",
     generate: "Generate script",
     generating: "Generating…",
     forging: "Forging your selling script…",
@@ -135,25 +158,33 @@ const STRINGS: Record<Lang, Dict> = {
     perYear: "/year",
     pricingTitle: "Pricing",
     pricingSub:
-      "Free 2 scripts/day. Upgrade for unlimited scripts + all features.",
+      "Free 2 scripts/day (text). Upgrade for unlimited scripts; video mode is for the Text + Video plan.",
     upgradeCta: "Upgrade to PRO",
     contactWa: "Confirm via WhatsApp",
     mostPopular: "MOST POPULAR",
     saveBadge: "Save",
-    freeFeature: "2 scripts per day",
-    unlimitedFeature: "Unlimited scripts + all modes",
+    freeFeature: "2 scripts per day (text only)",
+    unlimitedFeature: "Unlimited text scripts",
+    videoLocked:
+      "Video mode requires the Text + Video plan (Rp 75,000/month).",
+    choosePlan: "Choose plan",
+    textTier: "Text only",
+    videoTier: "Text + Video",
+    textTierFeature: "Unlimited text scripts",
+    videoTierFeature: "Unlimited text + video guides",
   },
 };
 
 interface MeData {
   loggedIn: boolean;
-  plan?: "FREE" | "PRO";
+  plan?: "FREE" | "PRO_TEXT" | "PRO_VIDEO";
   planExpiresAt?: string | null;
+  canVideo?: boolean;
   usedToday?: number;
   dailyLimit?: number;
   remainingToday?: number;
-  priceMonthly?: number;
-  priceYearly?: number;
+  priceText?: number;
+  priceVideo?: number;
   upgradeWhatsapp?: string;
   paymentInfo?: string;
 }
@@ -165,6 +196,7 @@ export default function Home() {
   const [category, setCategory] = useState("");
   const [lang, setLang] = useState<Lang>("id");
   const [mode, setMode] = useState<"text" | "video">("video");
+  const [format, setFormat] = useState<"video" | "threads">("video");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
@@ -175,12 +207,17 @@ export default function Home() {
   const reqIdRef = useRef(0);
 
   const [me, setMe] = useState<MeData | null>(null);
+  const [paying, setPaying] = useState<null | "TEXT" | "VIDEO">(null);
 
   async function fetchMe() {
     try {
       const res = await fetch("/api/me", { cache: "no-store" });
       const json = await res.json();
-      if (json.ok) setMe(json.data as MeData);
+      if (json.ok) {
+        const d = json.data as MeData;
+        setMe(d);
+        if (!d.canVideo) setMode("text");
+      }
     } catch {
       /* ignore */
     }
@@ -234,7 +271,7 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product, price, link, category, lang, mode }),
+        body: JSON.stringify({ product, price, link, category, lang, mode, format }),
       });
       const json = await res.json();
       if (!res.ok || !json.ok) {
@@ -242,6 +279,11 @@ export default function Home() {
           setError(t.loginRequired);
         } else if (res.status === 429 || json.error === "QUOTA_EXCEEDED") {
           setError(t.quotaExceeded);
+        } else if (
+          res.status === 402 ||
+          json.error === "VIDEO_UPGRADE_REQUIRED"
+        ) {
+          setError(t.videoLocked);
         } else {
           setError(json.error || `Request failed (${res.status})`);
         }
@@ -275,6 +317,33 @@ export default function Home() {
     }
   }
 
+  async function subscribe(tier: "TEXT" | "VIDEO") {
+    setPaying(tier);
+    setError("");
+    try {
+      const res = await fetch("/api/payments/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        setError(json.error || `Gagal memproses (${res.status})`);
+        return;
+      }
+      const url = json.data?.redirectUrl;
+      if (url) {
+        window.location.href = url;
+      } else {
+        setError("Tidak ada link pembayaran. Coba lagi.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPaying(null);
+    }
+  }
+
   const inputCls =
     "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-orange-500";
 
@@ -286,12 +355,14 @@ export default function Home() {
           <p className="mt-1 text-sm text-slate-500">{t.tagline}</p>
         </header>
 
+        {me && !me.loggedIn && <GoogleOneTap />}
+
         {me && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
             {me.loggedIn ? (
-              me.plan === "PRO" ? (
+              me.plan === "PRO_TEXT" || me.plan === "PRO_VIDEO" ? (
                 <span className="font-semibold text-emerald-700">
-                  ✓ {t.proActive}
+                  ✓ {t.proActive} ({me.plan === "PRO_VIDEO" ? t.videoTier : t.textTier})
                   {me.planExpiresAt && (
                     <span className="ml-2 font-normal text-slate-500">
                       {t.validUntil}{" "}
@@ -310,16 +381,29 @@ export default function Home() {
             ) : (
               <span className="text-slate-600">{t.loginRequired}</span>
             )}
-            <a
-              href={me.loggedIn ? "#pricing" : "/login"}
-              className="rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700"
-            >
-              {me.loggedIn
-                ? t.upgradeCta
-                : lang === "id"
-                  ? "Login"
-                  : "Sign in"}
-            </a>
+            {me.loggedIn ? (
+              <a
+                href="#pricing"
+                className="rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700"
+              >
+                {t.upgradeCta}
+              </a>
+            ) : (
+              <div className="flex shrink-0 gap-2">
+                <a
+                  href="/register"
+                  className="rounded-lg border border-orange-600 px-3 py-1.5 text-xs font-semibold text-orange-600 hover:bg-orange-50"
+                >
+                  {lang === "id" ? "Daftar" : "Sign up"}
+                </a>
+                <a
+                  href="/login"
+                  className="rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700"
+                >
+                  {lang === "id" ? "Login" : "Sign in"}
+                </a>
+              </div>
+            )}
           </div>
         )}
 
@@ -420,28 +504,69 @@ export default function Home() {
                 ))}
               </div>
             </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium text-slate-700">
+                {t.formatLabel}
+              </label>
+              <div className="flex gap-3">
+                {(["video", "threads"] as const).map((f) => (
+                  <label
+                    key={f}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm"
+                  >
+                    <input
+                      type="radio"
+                      name="format"
+                      checked={format === f}
+                      onChange={() => setFormat(f)}
+                      className="accent-orange-600"
+                    />
+                    {f === "video" ? t.formatVideo : t.formatThreads}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {format === "video" && (
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">
                 {t.modeLabel}
               </label>
               <div className="flex gap-3">
-                {(["text", "video"] as const).map((m) => (
-                  <label
-                    key={m}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm"
-                  >
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm">
+                  <input
+                    type="radio"
+                    name="mode"
+                    checked={mode === "text"}
+                    onChange={() => setMode("text")}
+                    className="accent-orange-600"
+                  />
+                  {t.textOnly}
+                </label>
+                {me?.canVideo ? (
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm">
                     <input
                       type="radio"
                       name="mode"
-                      checked={mode === m}
-                      onChange={() => setMode(m)}
+                      checked={mode === "video"}
+                      onChange={() => setMode("video")}
                       className="accent-orange-600"
                     />
-                    {m === "text" ? t.textOnly : t.textVideo}
+                    {t.textVideo}
                   </label>
-                ))}
+                ) : (
+                  <a
+                    href="#pricing"
+                    className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-400"
+                  >
+                    🔒 {t.textVideo}
+                    <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-600">
+                      PRO
+                    </span>
+                  </a>
+                )}
               </div>
             </div>
+            )}
           </div>
 
           <button
@@ -516,34 +641,47 @@ export default function Home() {
               </ul>
             </div>
 
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="text-sm font-semibold text-slate-700">
+                {t.textTier} {t.perMonth}
+              </div>
+              <div className="mt-2 text-2xl font-bold text-slate-900">
+                Rp {fmtRp(me?.priceText ?? 0)}
+              </div>
+              <ul className="mt-3 space-y-1 text-sm text-slate-600">
+                <li>• {t.textTierFeature}</li>
+              </ul>
+              <button
+                type="button"
+                disabled={paying !== null}
+                onClick={() => subscribe("TEXT")}
+                className="mt-4 w-full rounded-lg border border-orange-600 px-4 py-2 text-sm font-semibold text-orange-600 hover:bg-orange-50 disabled:opacity-50"
+              >
+                {paying === "TEXT" ? t.generating : t.choosePlan}
+              </button>
+            </div>
+
             <div className="relative rounded-xl border-2 border-orange-500 bg-white p-5 shadow-sm">
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-orange-600 px-2.5 py-0.5 text-[10px] font-bold text-white">
                 {t.mostPopular}
               </span>
               <div className="text-sm font-semibold text-slate-700">
-                {t.proPlan} {t.perMonth}
+                {t.videoTier} {t.perMonth}
               </div>
               <div className="mt-2 text-2xl font-bold text-slate-900">
-                Rp {fmtRp(me?.priceMonthly ?? 0)}
+                Rp {fmtRp(me?.priceVideo ?? 0)}
               </div>
               <ul className="mt-3 space-y-1 text-sm text-slate-600">
-                <li>• {t.unlimitedFeature}</li>
+                <li>• {t.videoTierFeature}</li>
               </ul>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="text-sm font-semibold text-slate-700">
-                {t.proPlan} {t.perYear}
-              </div>
-              <div className="mt-2 text-2xl font-bold text-slate-900">
-                Rp {fmtRp(me?.priceYearly ?? 0)}
-              </div>
-              <div className="mt-1 text-xs font-semibold text-emerald-600">
-                {t.saveBadge}
-              </div>
-              <ul className="mt-3 space-y-1 text-sm text-slate-600">
-                <li>• {t.unlimitedFeature}</li>
-              </ul>
+              <button
+                type="button"
+                disabled={paying !== null}
+                onClick={() => subscribe("VIDEO")}
+                className="mt-4 w-full rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
+              >
+                {paying === "VIDEO" ? t.generating : t.choosePlan}
+              </button>
             </div>
           </div>
 

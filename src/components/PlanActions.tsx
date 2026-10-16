@@ -16,7 +16,7 @@ export default function PlanActions({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function setPlan(action: "monthly" | "yearly" | "free") {
+  async function setPlan(action: "text" | "video" | "free") {
     setBusy(true);
     setError("");
     try {
@@ -63,18 +63,18 @@ export default function PlanActions({
         <button
           type="button"
           disabled={busy}
-          onClick={() => setPlan("monthly")}
+          onClick={() => setPlan("text")}
           className={`${btn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
         >
-          +30 hari
+          +30h Teks
         </button>
         <button
           type="button"
           disabled={busy}
-          onClick={() => setPlan("yearly")}
+          onClick={() => setPlan("video")}
           className={`${btn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
         >
-          +1 tahun
+          +30h Video
         </button>
         <button
           type="button"

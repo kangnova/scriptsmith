@@ -4,8 +4,9 @@ import { authOptions } from "@/lib/auth";
 import { complete } from "@/lib/openrouter";
 
 const SYSTEM = `Kamu adalah asisten yang jago mengklasifikasi produk e-commerce.
-Tugasmu memberi saran kategori jualan yang spesifik untuk konten video pendek
-(TikTok/Reels/Shorts). Kembalikan HANYA array JSON berisi 5-8 string kategori
+Tugasmu memberi saran kategori jualan yang spesifik untuk konten jualan
+(video pendek TikTok/Reels/Shorts & Threads/carousel). Kembalikan HANYA array
+JSON berisi 5-8 string kategori
 pendek (maks 3 kata per kategori). Tanpa teks lain, tanpa penjelasan, tanpa
 code fence.`;
 

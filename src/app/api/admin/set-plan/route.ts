@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { PRO_MONTHLY_DAYS, PRO_YEARLY_DAYS } from "@/lib/limits";
+import { PRO_DAYS, PLAN } from "@/lib/limits";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Admin-only: setel plan user.
- * body: { userId, action: "monthly" | "yearly" | "free" }
- *   monthly -> PRO 30 hari, yearly -> PRO 365 hari, free -> FREE.
+ * body: { userId, action: "text" | "video" | "free" }
+ *   text  -> PRO_TEXT (Teks saja) 30 hari, video -> PRO_VIDEO 30 hari, free -> FREE.
  */
 export async function POST(req: Request) {
   try {
@@ -37,18 +37,18 @@ export async function POST(req: Request) {
 
     let plan: string;
     let planExpiresAt: Date | null;
-    if (action === "monthly") {
-      plan = "PRO";
-      planExpiresAt = new Date(Date.now() + PRO_MONTHLY_DAYS * DAY_MS);
-    } else if (action === "yearly") {
-      plan = "PRO";
-      planExpiresAt = new Date(Date.now() + PRO_YEARLY_DAYS * DAY_MS);
+    if (action === "text") {
+      plan = PLAN.PRO_TEXT;
+      planExpiresAt = new Date(Date.now() + PRO_DAYS * DAY_MS);
+    } else if (action === "video") {
+      plan = PLAN.PRO_VIDEO;
+      planExpiresAt = new Date(Date.now() + PRO_DAYS * DAY_MS);
     } else if (action === "free") {
-      plan = "FREE";
+      plan = PLAN.FREE;
       planExpiresAt = null;
     } else {
       return NextResponse.json(
-        { ok: false, error: "action must be monthly, yearly, or free" },
+        { ok: false, error: "action must be text, video, or free" },
         { status: 400 }
       );
     }
