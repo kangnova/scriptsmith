@@ -13,13 +13,18 @@ model User {
   email         String?      @unique
   emailVerified DateTime?
   image         String?
+  username      String?      @unique
+  passwordHash  String?
   role          String       @default("USER")
   plan          String       @default("FREE")
   planExpiresAt DateTime?
+  loginCount    Int          @default(0)
+  lastLoginAt   DateTime?
   createdAt     DateTime     @default(now())
   accounts      Account[]
   sessions      Session[]
   generations   Generation[]
+  payments      Payment[]
 }
 
 model Account {
@@ -64,4 +69,18 @@ model Generation {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  userId    String
+  tier      String // "TEXT" | "VIDEO"
+  amount    Int
+  status    String   @default("PENDING") // PENDING | SETTLED | FAILED
+  createdAt DateTime @default(now())
+  settledAt DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

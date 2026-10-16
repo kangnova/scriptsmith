@@ -4,10 +4,12 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   FREE_DAILY_LIMIT,
-  PRICE_MONTHLY,
-  PRICE_YEARLY,
+  PRICE_TEXT,
+  PRICE_VIDEO,
+  MIDTRANS_CLIENT_KEY,
   UPGRADE_WHATSAPP,
   PAYMENT_INFO,
+  canUseVideoMode,
   effectivePlan,
   jakartaStartOfDay,
 } from "@/lib/limits";
@@ -16,8 +18,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const base = {
-    priceMonthly: PRICE_MONTHLY,
-    priceYearly: PRICE_YEARLY,
+    priceText: PRICE_TEXT,
+    priceVideo: PRICE_VIDEO,
+    midtransClientKey: MIDTRANS_CLIENT_KEY,
     upgradeWhatsapp: UPGRADE_WHATSAPP,
     paymentInfo: PAYMENT_INFO,
   };
@@ -46,6 +49,7 @@ export async function GET() {
       email: user.email,
       role: user.role,
       plan,
+      canVideo: canUseVideoMode(plan),
       planExpiresAt: user.planExpiresAt ? user.planExpiresAt.toISOString() : null,
       usedToday,
       dailyLimit: FREE_DAILY_LIMIT,

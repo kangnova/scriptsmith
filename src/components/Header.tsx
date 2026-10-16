@@ -31,12 +31,20 @@ export default function Header({ session }: { session: Session | null }) {
             </button>
           </>
         ) : (
-          <a
-            href="/login"
-            className="font-medium text-orange-600 hover:underline"
-          >
-            Sign in
-          </a>
+          <>
+            <a
+              href="/register"
+              className="font-medium text-slate-600 hover:text-slate-800"
+            >
+              Sign up
+            </a>
+            <a
+              href="/login"
+              className="font-medium text-orange-600 hover:underline"
+            >
+              Sign in
+            </a>
+          </>
         )}
       </div>
     </header>

@@ -5,9 +5,9 @@ import Header from "@/components/Header";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ScriptSmith — AI selling-content scripts",
+  title: "ScriptSmith — Selling-content scripts",
   description:
-    "Generate ready-to-post Indonesian selling scripts, music picks, and AI video prompts for TikTok, Reels, and Shorts.",
+    "Generate ready-to-post Indonesian selling scripts, music picks, and video prompts for TikTok, Reels, and Shorts.",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
